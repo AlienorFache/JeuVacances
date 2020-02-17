@@ -33,9 +33,10 @@ typedef struct Perso perso;
 
 struct Lieux
 {
-	char name[25];
-	char description[100];
-	monstre tMonstre[10];
+    char name[25];
+    char description[100];
+    int dif;
+    monstre tMonstre[10];
 };
 typedef struct Lieux lieux;
 
@@ -44,13 +45,13 @@ void creationMonstre(lieux *lieu, int nbMonstre)
     for (int i = 0; i < nbMonstre; i++)
     {
 
-        lieu->tMonstre[i].life = 100;
-        
-        lieu->tMonstre[i].pm = 5;
+        lieu->tMonstre[i].life = 100 * lieu->dif;
 
-        lieu->tMonstre[i].degats = (rand() % 11) + 10;
-        
-        if (lieu->tMonstre[i].degats > 15)
+        lieu->tMonstre[i].pm = 5 * lieu->dif;
+
+        lieu->tMonstre[i].degats = ((rand() % 11) + 10) * lieu->dif;
+
+        if (lieu->tMonstre[i].degats > (15 * lieu->dif))
         {
             lieu->tMonstre[i].oResistance = 1;
         }
@@ -63,7 +64,6 @@ void creationMonstre(lieux *lieu, int nbMonstre)
         lieu->tMonstre[i].poison = 0;
         lieu->tMonstre[i].agro = 0;
     }
-
 }
 
 void xpPerso(perso *perso)
@@ -91,7 +91,7 @@ int checkMonstreChoisi(monstre tMonstre[], int choix, int nbMonstre)
 }
 
 // ne reconnait pas perso donc je laisse struct Perso mais reconnait monstre
-void actionPerso(perso *perso, monstre tMonstre[], struct Perso tPerso[], int nbMonstre)
+void actionPerso(perso *perso, monstre tMonstre[], struct Perso tPerso[], int nbMonstre, int *comptMonstreMort)
 {
     int monstreChoisi;
     int check = 0;
@@ -144,6 +144,7 @@ void actionPerso(perso *perso, monstre tMonstre[], struct Perso tPerso[], int nb
         if (tMonstre[monstreChoisi].life <= 0)
         {
             printf("Le monstre %d est mort.\n\n", monstreChoisi);
+            *comptMonstreMort += 1;
             perso->xp++;
             xpPerso(perso);
         }
@@ -186,7 +187,17 @@ void actionPerso(perso *perso, monstre tMonstre[], struct Perso tPerso[], int nb
             tMonstre[monstreChoisi].life -= 10;
             tMonstre[monstreChoisi].poison = 2;
             perso->pm -= 5;
-            printf("Vous avez %dPM, le monstre %d a %dPV\n\n", perso->pm, monstreChoisi, tMonstre[monstreChoisi].life);
+            if (tMonstre[monstreChoisi].life <= 0)
+            {
+                printf("Le monstre %d est mort.\n\n", monstreChoisi);
+                *comptMonstreMort += 1;
+                perso->xp++;
+                xpPerso(perso);
+            }
+            else
+            {
+                printf("Vous avez %dPM, le monstre %d a %dPV\n\n", perso->pm, monstreChoisi, tMonstre[monstreChoisi].life);
+            }
         }
 
         //tank
@@ -255,16 +266,17 @@ void actionMonstre(monstre tMonstre[], perso tPerso[], int nbMonstre)
                     printf("Le monstre %d resiste ! Les degats qu'il recoit sont divises par %d.\n", i, tMonstre[i].resistance);
                 }
             }
-
         }
     }
 }
 
-void combat (perso tPerso[], lieux *lieu, int nbMonstre)
+int combat(perso tPerso[], lieux *lieu, int nbMonstre)
 {
+
+    printf("Vous etes arrive %s, ou il y a %s.\n", lieu->name, lieu->description);
     int comptMonstreMort = 0;
 
-    while (tPerso[0].life > 0 && tPerso[1].life > 0 && tPerso[2].life > 0 && comptMonstreMort < nbMonstre)
+    while ((tPerso[0].life > 0 || tPerso[1].life > 0 || tPerso[2].life > 0) && comptMonstreMort < nbMonstre)
     {
         printf("\nNouveau tour\n");
         //avant que le joueur ne joue
@@ -298,11 +310,11 @@ void combat (perso tPerso[], lieux *lieu, int nbMonstre)
 
         //tour de jeu pour chaque perso
         printf("\nVous jouez le mage :\nPV : %d\nPM : %d\nDegats :%d\nResistance :%d\nAction speciale : soin\n\n", tPerso[0].life, tPerso[0].pm, tPerso[0].degat, tPerso[0].resistance);
-        actionPerso(&tPerso[0], lieu->tMonstre, tPerso, nbMonstre);
+        actionPerso(&tPerso[0], lieu->tMonstre, tPerso, nbMonstre, &comptMonstreMort);
         printf("\nVous jouez l'archer :\nPV : %d\nPM : %d\nDegats :%d\nResistance :%d\nAction speciale : fleche empoisonnes\n\n", tPerso[1].life, tPerso[1].pm, tPerso[1].degat, tPerso[1].resistance);
-        actionPerso(&tPerso[1], lieu->tMonstre, tPerso, nbMonstre);
+        actionPerso(&tPerso[1], lieu->tMonstre, tPerso, nbMonstre, &comptMonstreMort);
         printf("\nVous jouez le tank :\nPV : %d\nPM : %d\nDegats :%d\nResistance :%d\nAction speciale : agro\n\n", tPerso[2].life, tPerso[2].pm, tPerso[2].degat, tPerso[2].resistance);
-        actionPerso(&tPerso[2], lieu->tMonstre, tPerso, nbMonstre);
+        actionPerso(&tPerso[2], lieu->tMonstre, tPerso, nbMonstre, &comptMonstreMort);
 
         //avant le tour des monstres
         for (int i = 0; i < nbMonstre; i++)
@@ -326,7 +338,23 @@ void combat (perso tPerso[], lieux *lieu, int nbMonstre)
                 comptMonstreMort++;
             }
         }
-        printf("\nVous avez tue %d monstres au total.\n", comptMonstreMort);
+        if (comptMonstreMort == nbMonstre)
+        {
+            printf("\nVous avez tue tous les monstres.\n");
+        }
+        else
+        {
+            printf("\nVous avez tue %d monstres au total.\n", comptMonstreMort);
+        }
+    }
+
+    if (comptMonstreMort == nbMonstre)
+    {
+        return 1;
+    }
+    else
+    {
+        return 0;
     }
 }
 
@@ -335,45 +363,53 @@ int main()
 
     int persoChoisi;
     int nbMonstre = 10;
-    
+
     srand(time(NULL));
 
     //Creation Perso
 
     perso mage = {1, 100, 100, 20, 2, 0, 1, 1};
-    perso archer = {2, 100, 100, 5, 20, 0, 1, 1};
+    perso archer = {2, 100, 100, 5, 202, 0, 1, 1};
     perso tank = {3, 100, 100, 0, 15, 0, 1, 2};
 
     perso tPerso[3] = {mage, archer, tank};
 
-    lieux lieu0 = {"Le pot de chambre", "une foret tropical"};
+    lieux lieu0 = {"au Pot de Chambre", "une foret tropical", 1};
     creationMonstre(&lieu0, nbMonstre);
-    lieux lieu1 = {"Le Mordor", "des montagnes"};
+    lieux lieu1 = {"au Mordor", "des montagnes", 2};
     creationMonstre(&lieu1, nbMonstre);
-	lieux lieu2 = {"Guenievre blanche fesse", "une plage de sable blanc"};
+    lieux lieu2 = {"a Guenievre Blanche Fesse", "une plage de sable blanc", 3};
     creationMonstre(&lieu2, nbMonstre);
-	lieux lieu3 = {"L age de Pierre", "d'enormes grottes. Vous entendez quelqu'un crier present."};
+    lieux lieu3 = {"a L age de Pierre", "d'enormes grottes. Vous entendez quelqu'un crier present.", 4};
     creationMonstre(&lieu3, nbMonstre);
-	lieux lieu4 = {"Mont Cameroun", "un volcan en activitee"};
+    lieux lieu4 = {"au Mont Cameroun", "un volcan en activitee", 5};
     creationMonstre(&lieu4, nbMonstre);
-	lieux lieu5 = {"Ranch ta Chambre", "un ranch"};
+    lieux lieu5 = {"au Ranch ta Chambre", "un ranch", 6};
     creationMonstre(&lieu5, nbMonstre);
 
     lieux tLieux[6] = {lieu0, lieu1, lieu2, lieu3, lieu4, lieu5};
 
-    printf("monstre life: %d degats : %d\n", tLieux[0].tMonstre[1].life, tLieux[0].tMonstre[1].degats);
-    
-    int lieuAct = 5; //6 = home
-    int game = 0;
+    int lieuAct = 0;
+    int victory = 0;
 
-    if (lieuAct == 6)
+    while (lieuAct <= 5)
     {
+        victory = combat(tPerso, &tLieux[lieuAct], nbMonstre);
+        if (victory == 1)
+        {
+            lieuAct++;
+            victory = 0;
+            if (lieuAct == 6)
+            {
+                printf("Vous avez nettoyer le nomde de tout les monstres, bravo !\n");
+                return 0;
+            }
+        }
+        else
+        {
+            printf("Vous avez perdu. Vous allez recommencer le combat.\n");
+        }
+    }
 
-    }
-    else
-    {
-        combat(tPerso, &tLieux[lieuAct], nbMonstre);
-    }
-    
     return 0;
 }
