@@ -26,6 +26,8 @@ struct Perso
     int pm;
     int pmMax;
     int degat;
+    int maxDegats;
+    int degTimer;
     int xp;
     int niveau;
     int resistance;
@@ -45,6 +47,7 @@ typedef struct Lieux lieux;
 
 struct Object
 {
+    int id;
     char name[21];
     int price;
 };
@@ -138,7 +141,6 @@ void view(object tableau[], int size, int *money)
     }
     printf("\n");
 }
-
 
 // ne reconnait pas perso donc je laisse struct Perso mais reconnait monstre
 void actionPerso(perso *perso, monstre tMonstre[], struct Perso tPerso[], int nbMonstre, int *comptMonstreMort, object tInventaire[], int *money)
@@ -306,15 +308,89 @@ void actionPerso(perso *perso, monstre tMonstre[], struct Perso tPerso[], int nb
             }
         }
 
-        if (strcmp(tInventaire[select].name, "Potion de mana +10") == 0)
+        switch (tInventaire[select].id)
         {
+        //mana +10
+        case 1:
             perso->pm += 10;
-            if(perso->pm > perso->pmMax)
+            if (perso->pm > perso->pmMax)
             {
                 perso->pm = perso->pmMax;
             }
             printf("Vous avez %dPM.\n", perso->pm);
+            break;
+        //life +20
+        case 2:
+            perso->life += 20;
+            if (perso->life > perso->maxLife)
+            {
+                perso->life = perso->maxLife;
+            }
+            printf("Vous avez %dPV.\n", perso->life);
+            break;
+        //degats +10
+        case 3:
+            perso->degat += 10;
+            perso->degTimer += 2;
+            printf("Vous faites %d point de degat.\n", perso->degat);
+            break;
+        //mana +20
+        case 4:
+            perso->pm += 20;
+            if (perso->pm > perso->pmMax)
+            {
+                perso->pm = perso->pmMax;
+            }
+            printf("Vous avez %dPM.\n", perso->pm);
+            break;
+        //life +50
+        case 5:
+            perso->life += 50;
+            if (perso->life > perso->maxLife)
+            {
+                perso->life = perso->maxLife;
+            }
+            printf("Vous avez %dPV.\n", perso->life);
+            break;
+        //degats +20
+        case 6:
+            perso->degat += 20;
+            perso->degTimer += 2;
+            printf("Vous faites %d point de degat.\n", perso->degat);
+            break;
+        //mana +30
+        case 7:
+            perso->pm += 30;
+            if (perso->pm > perso->pmMax)
+            {
+                perso->pm = perso->pmMax;
+            }
+            printf("Vous avez %dPM.\n", perso->pm);
+            break;
+        //life +100
+        case 8:
+            perso->life += 100;
+            if (perso->life > perso->maxLife)
+            {
+                perso->life = perso->maxLife;
+            }
+            printf("Vous avez %dPV.\n", perso->life);
+            break;
+        //degats +50
+        case 9:
+            perso->degat += 50;
+            perso->degTimer += 2;
+            printf("Vous faites %d point de degat.\n", perso->degat);
+            break;
+        default:
+            printf("erreur");
+            break;
         }
+        //retire de l'inventaire l'objet utilisé
+        object vide = {0, "\0", 0};
+        tInventaire[select] = vide;
+
+
     }
 }
 
@@ -390,6 +466,18 @@ int combat(perso tPerso[], lieux *lieu, int nbMonstre, object tInventaire[], int
         if (tPerso[1].pm < tPerso[1].pmMax)
         {
             tPerso[1].pm++;
+        }
+        //effet de la potion de force
+        for (int i = 0; i < 3; i++)
+        {
+            if (tPerso[i].degTimer > 0)
+            {
+                tPerso[i].degTimer--;
+            }
+            else
+            {
+                tPerso[i].degat = tPerso[i].maxDegats;
+            }
         }
 
         //pour les monstres
@@ -469,10 +557,11 @@ int main()
     srand(time(NULL));
 
     //Creation Perso
+    //id; life; maxLife; pm; pmMax; degat; maxDegats; degTimer; xp; niveau; resistance
 
-    perso mage = {1, 100, 100, 20, 20, 2, 0, 1, 1};
-    perso archer = {2, 100, 100, 5, 5, 202, 0, 1, 1};
-    perso tank = {3, 100, 100, 0, 0, 15, 0, 1, 2};
+    perso mage = {1, 100, 100, 20, 20, 2, 2, 0, 0, 1, 1};
+    perso archer = {2, 100, 100, 5, 5, 20, 20, 0, 0, 1, 1};
+    perso tank = {3, 100, 100, 0, 0, 15, 15, 0, 0, 1, 2};
 
     perso tPerso[3] = {mage, archer, tank};
 
@@ -491,17 +580,17 @@ int main()
 
     lieux tLieux[6] = {lieu0, lieu1, lieu2, lieu3, lieu4, lieu5};
 
-    object potMana = {"Potion de mana +10", 10};
-    object potLife = {"Potion de soin +20", 10};
-    object potStrength = {"Potion de force +10", 10};
-    object potMana2 = {"Potion de mana +20", 20};
-    object potLife2 = {"Potion de soin +50", 25};
-    object potStrength2 = {"Potion de force +20", 20};
-    object potMana3 = {"Potion de mana +30", 30};
-    object potLife3 = {"Potion de soin +100", 50};
-    object potStrength3 = {"Potion de force +50", 40};
+    object potMana = {1, "Potion de mana +10", 10};
+    object potLife = {2, "Potion de soin +20", 10};
+    object potStrength = {3, "Potion de force +10", 10};
+    object potMana2 = {4, "Potion de mana +20", 20};
+    object potLife2 = {5, "Potion de soin +50", 25};
+    object potStrength2 = {6, "Potion de force +20", 20};
+    object potMana3 = {7, "Potion de mana +30", 30};
+    object potLife3 = {8, "Potion de soin +100", 50};
+    object potStrength3 = {9, "Potion de force +50", 40};
 
-    object vide = {"\0", 0};
+    object vide = {0, "\0", 0};
 
     object tInventaire[10] = {potMana, potLife, potStrength, potMana2, potLife2, potStrength2, potMana3, potLife3, potStrength3, vide};
     //object tInventaire[10] = {vide, vide, vide, vide, vide, vide, vide, vide, vide, vide};
