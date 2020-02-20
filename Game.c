@@ -105,29 +105,29 @@ int checkMonstreChoisi(monstre tMonstre[], int choix, int nbMonstre)
     return 0;
 }
 
-void sortInv(object tInventaire[])
+void sortInv(object tableau[], int size)
 {
-    for (int i = 2; i > 0; i--)
+    // i = taille du tab - 1
+    for (int i = size - 1; i > 0; i--)
     {
 
         for (int j = 0; j < i; j++)
         {
 
-            if (strcmp(tInventaire[j].name, tInventaire[j + 1].name) > 0)
+            if (strcmp(tableau[j].name, tableau[j + 1].name) > 0)
             {
 
                 object copie;
-                copie = tInventaire[j + 1];
-                tInventaire[j + 1] = tInventaire[j];
-                tInventaire[j] = copie;
+                copie = tableau[j + 1];
+                tableau[j + 1] = tableau[j];
+                tableau[j] = copie;
             }
         }
     }
 }
 
-void view(object tableau[], int size, int *money)
+void view(object tableau[], int size)
 {
-    printf("Vous avez : %dAg\n", *money);
     for (int i = 0; i < size; i++)
     {
         if (tableau[i].price == 0)
@@ -142,8 +142,8 @@ void view(object tableau[], int size, int *money)
     printf("\n");
 }
 
-// ne reconnait pas perso donc je laisse struct Perso mais reconnait monstre
-void actionPerso(perso *perso, monstre tMonstre[], struct Perso tPerso[], int nbMonstre, int *comptMonstreMort, object tInventaire[], int *money)
+// ne reconnait pas perso donc je laisse struct Perso tPerso[]
+void actionPerso(perso *perso, monstre tMonstre[], struct Perso tPerso[], int nbMonstre, object tInventaire[], int *money)
 {
     int monstreChoisi;
     int check = 0;
@@ -165,7 +165,8 @@ void actionPerso(perso *perso, monstre tMonstre[], struct Perso tPerso[], int nb
         printf("\nTape 1 pour attaquer, 2 pour l'action speciale, 3 pour te proteger ou 4 pour utiliser un objet.\n");
         scanf("%d", &perso->choix);
 
-        //Verifie que le joueur ne donne pas un autre chiffre que 1, 2, 3 ou 4
+        //Verification pour que le joueur ne donne pas un autre chiffre que 1, 2, 3 ou 4
+
         //Vérifie si le mage et l'archer ont assez de mana pour leurs actions spéciales
         if (perso->choix == 2 && perso->pm >= 5 && perso->id != 3)
         {
@@ -218,9 +219,9 @@ void actionPerso(perso *perso, monstre tMonstre[], struct Perso tPerso[], int nb
 
         if (tMonstre[monstreChoisi].life <= 0)
         {
-            printf("Le monstre %d est mort.\n\n", monstreChoisi);
-            *comptMonstreMort += 1;
+            printf("Le monstre %d est mort. Vous gagnez 5Ag.\n\n", monstreChoisi);
             perso->xp++;
+            *money += 5;
             xpPerso(perso);
         }
     }
@@ -237,7 +238,6 @@ void actionPerso(perso *perso, monstre tMonstre[], struct Perso tPerso[], int nb
     {
 
         //mage
-        //ajouter une protection
         if (perso->id == 1)
         {
             int i;
@@ -267,9 +267,9 @@ void actionPerso(perso *perso, monstre tMonstre[], struct Perso tPerso[], int nb
             perso->pm -= 5;
             if (tMonstre[monstreChoisi].life <= 0)
             {
-                printf("Le monstre %d est mort.\n\n", monstreChoisi);
-                *comptMonstreMort += 1;
+                printf("Le monstre %d est mort. Vous gagnez 5Ag.\n\n", monstreChoisi);
                 perso->xp++;
+                *money += 5;
                 xpPerso(perso);
             }
             else
@@ -277,7 +277,6 @@ void actionPerso(perso *perso, monstre tMonstre[], struct Perso tPerso[], int nb
                 printf("Vous avez %dPM, le monstre %d a %dPV\n\n", perso->pm, monstreChoisi, tMonstre[monstreChoisi].life);
             }
         }
-
         //tank
         if (perso->id == 3)
         {
@@ -296,7 +295,8 @@ void actionPerso(perso *perso, monstre tMonstre[], struct Perso tPerso[], int nb
     //inventaire
     if (perso->choix == 4)
     {
-        view(tInventaire, 10, money);
+        sortInv(tInventaire, 10);
+        view(tInventaire, 10);
         int ok = 0;
         while (ok == 0)
         {
@@ -389,8 +389,6 @@ void actionPerso(perso *perso, monstre tMonstre[], struct Perso tPerso[], int nb
         //retire de l'inventaire l'objet utilisé
         object vide = {0, "\0", 0};
         tInventaire[select] = vide;
-
-
     }
 }
 
@@ -495,16 +493,23 @@ int combat(perso tPerso[], lieux *lieu, int nbMonstre, object tInventaire[], int
                 lieu->tMonstre[i].poison--;
                 lieu->tMonstre[i].life -= 10;
                 printf("\nLe monstre %d a perdu 10 PV avec le poison.\n", i);
+                if (lieu->tMonstre[i].life <= 0)
+                {
+                    printf("Il est mort. Vous gagnez 5Ag.\n\n");
+                    tPerso[1].xp++;
+                    *money += 5;
+                    xpPerso(&tPerso[1]);
+                }
             }
         }
 
         //tour de jeu pour chaque perso
         printf("\nVous jouez le mage :\nPV : %d\nPM : %d\nDegats :%d\nResistance :%d\nAction speciale : soin\n\n", tPerso[0].life, tPerso[0].pm, tPerso[0].degat, tPerso[0].resistance);
-        actionPerso(&tPerso[0], lieu->tMonstre, tPerso, nbMonstre, &comptMonstreMort, tInventaire, money);
+        actionPerso(&tPerso[0], lieu->tMonstre, tPerso, nbMonstre, tInventaire, money);
         printf("\nVous jouez l'archer :\nPV : %d\nPM : %d\nDegats :%d\nResistance :%d\nAction speciale : fleche empoisonnes\n\n", tPerso[1].life, tPerso[1].pm, tPerso[1].degat, tPerso[1].resistance);
-        actionPerso(&tPerso[1], lieu->tMonstre, tPerso, nbMonstre, &comptMonstreMort, tInventaire, money);
+        actionPerso(&tPerso[1], lieu->tMonstre, tPerso, nbMonstre, tInventaire, money);
         printf("\nVous jouez le tank :\nPV : %d\nPM : %d\nDegats :%d\nResistance :%d\nAction speciale : agro\n\n", tPerso[2].life, tPerso[2].pm, tPerso[2].degat, tPerso[2].resistance);
-        actionPerso(&tPerso[2], lieu->tMonstre, tPerso, nbMonstre, &comptMonstreMort, tInventaire, money);
+        actionPerso(&tPerso[2], lieu->tMonstre, tPerso, nbMonstre, tInventaire, money);
 
         //avant le tour des monstres
         for (int i = 0; i < nbMonstre; i++)
@@ -545,6 +550,129 @@ int combat(perso tPerso[], lieux *lieu, int nbMonstre, object tInventaire[], int
     else
     {
         return 0;
+    }
+}
+
+void marchand(object tSeller[], object tStock[], object tInventaire[], int *money)
+{
+    sortInv(tInventaire, 10);
+    view(tInventaire, 10);
+
+    printf("\nVous avez %Ag.\n", *money);
+    
+    //rempli l'inventaire du marchand
+    for (int i = 0; i < 5; i++)
+    {
+        int j = (rand() % 9);
+        tSeller[i] = tStock[j];
+    }
+
+    sortInv(tSeller, 5);
+    view(tSeller, 5);
+
+    char choix[4];
+    int verif = 0;
+
+    //trouve un emplacement vide dans l'inventaire
+    int i = 0;
+    while (tInventaire[i].price != 0 && i <= 9)
+    {
+        i++;
+    }
+    if (i > 9)
+    {
+        printf("Votre inventaire est plein. Vous ne pouvez rien acheter.\n");
+        verif = 1;
+    }
+
+    printf("Voulez vous acheter ?(oui ou non)\n");
+    scanf("%s", choix);
+    while (verif == 0)
+    {
+
+        if (strcmp(choix, "oui") == 0)
+        {
+            int ok = 0;
+            int select = 0;
+            while (ok == 0)
+            {
+                printf("Choisissez l'object a acheter.\n");
+                scanf("%d", &select);
+                if (select < 5 && select >= 0)
+                {
+                    ok = 1;
+                }
+            }
+
+            *money -= tSeller[select].price;
+            if (*money < 0)
+            {
+                *money += tSeller[select].price;
+                printf("Vous n'avez pas asser d'argent. Vous avez %dAg.\n", *money);
+                int check = 0;
+                while (check == 0)
+                {
+                    printf("Voulez vous acheter autre chose ?(oui ou non)\n");
+                    scanf("%s", choix);
+
+                    if (strcmp(choix, "oui") == 0)
+                    {
+                        check = 1;
+                    }
+                    else if (strcmp(choix, "non") == 0)
+                    {
+                        check = 1;
+                        verif = 1;
+                    }
+                    else
+                    {
+                        printf("Reponse par oui ou non.\n");
+                    }
+                }
+            }
+            else if (*money >= 0)
+            {
+
+                tInventaire[i] = tSeller[select];
+                tSeller[select] = tStock[9];
+
+                printf("Vous avez achetez %s.\n", tInventaire[i].name);
+                printf("Il vous reste %dAg\n", *money);
+
+                sortInv(tSeller, 5);
+                view(tSeller, 5);
+
+                int check = 0;
+                while (check == 0)
+                {
+                    printf("Voulez vous acheter autre chose ?(oui ou non)\n");
+                    scanf("%s", choix);
+
+                    if (strcmp(choix, "oui") == 0)
+                    {
+                        check = 1;
+                    }
+                    else if (strcmp(choix, "non") == 0)
+                    {
+                        check = 1;
+                        verif = 1;
+                    }
+                    else
+                    {
+                        printf("Reponse par oui ou non.\n");
+                    }
+                }
+            }
+        }
+        else if (strcmp(choix, "non") == 0)
+        {
+            verif = 1;
+        }
+        else
+        {
+            printf("Reponse par oui ou non.\n");
+            scanf("%s", choix);
+        }
     }
 }
 
@@ -590,21 +718,20 @@ int main()
     object potLife3 = {8, "Potion de soin +100", 50};
     object potStrength3 = {9, "Potion de force +50", 40};
 
-    object vide = {0, "\0", 0};
+    object vide = {0, "z", 0};
 
-    object tInventaire[10] = {potMana, potLife, potStrength, potMana2, potLife2, potStrength2, potMana3, potLife3, potStrength3, vide};
-    //object tInventaire[10] = {vide, vide, vide, vide, vide, vide, vide, vide, vide, vide};
+    object tStock[10] = {potMana, potLife, potStrength, potMana2, potLife2, potStrength2, potMana3, potLife3, potStrength3, vide};
+    object tInventaire[10] = {vide, vide, vide, vide, vide, vide, vide, vide, vide, vide};
+    object tSeller[5] = {vide, vide, vide, vide, vide};
 
     int lieuAct = 0;
     int victory = 0;
 
-    int money = 1000;
-
-    //sortInv(tInventaire);
-    //view(tInventaire, 10, &money);
+    int money = 30;
 
     while (lieuAct <= 5)
     {
+        marchand(tSeller, tStock, tInventaire, &money);
         victory = combat(tPerso, &tLieux[lieuAct], nbMonstre, tInventaire, &money);
         if (victory == 1)
         {
@@ -618,7 +745,7 @@ int main()
         }
         else
         {
-            printf("Vous avez perdu. Vous allez recommencer le combat.\n");
+            printf("Vous avez perdu. Vous allez passer chez le marchand et recommencer le combat.\n");
         }
     }
 
