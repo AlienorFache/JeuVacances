@@ -544,7 +544,7 @@ int combat(perso tPerso[], lieux *lieu, int nbMonstre, object tInventaire[], int
     printf("\nVous etes arrive %s, ou il y a %s.\n", lieu->name, lieu->description);
     int comptMonstreMort = 0;
 
-    while ((tPerso[0].life > 0 || tPerso[1].life > 0 || tPerso[2].life > 0) && comptMonstreMort < nbMonstre)
+    while (tPerso[0].life > 0 && tPerso[1].life > 0 && tPerso[2].life > 0 && comptMonstreMort < nbMonstre)
     {
         printf("\nNouveau tour\n");
         //avant que le joueur ne joue
@@ -684,14 +684,14 @@ void marchand(object tSeller[], object tStock[], object tInventaire[], int *mone
     }
 
     printf("Voulez vous acheter ?(oui ou non)\n");
-    scanf("%s", choix);
+    
     while (verif == 0)
     {
-
+        scanf("%s", choix);
         if (strcmp(choix, "oui") == 0)
         {
             int ok = 0;
-            int select = 0;
+            int select;
             while (ok == 0)
             {
                 printf("Choisissez l'object a acheter.\n");
@@ -700,6 +700,8 @@ void marchand(object tSeller[], object tStock[], object tInventaire[], int *mone
                 {
                     ok = 1;
                 }
+                fflush(stdin);
+                
             }
 
             *money -= tSeller[select].price;
@@ -769,7 +771,6 @@ void marchand(object tSeller[], object tStock[], object tInventaire[], int *mone
         else
         {
             printf("Reponse par oui ou non.\n");
-            scanf("%s", choix);
         }
     }
 }
