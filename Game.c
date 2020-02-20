@@ -31,6 +31,9 @@ struct Perso
     int xp;
     int niveau;
     int resistance;
+    int soin;
+    int poison;
+    int timerAgro;
     int choix;
 };
 
@@ -85,8 +88,84 @@ void xpPerso(perso *perso)
 {
     if (perso->xp == perso->niveau)
     {
-        perso->maxLife += 10;
-        perso->life = perso->maxLife;
+        printf("Votre personage a gagne un niveau !\n");
+        int check = 0;
+        int choix;
+        while (check == 0)
+        {
+            if (perso->id == 3)
+            {
+                printf("Que voulez vous ameliorer ?\n1 _ Vie\n3 _ Degats\n4 _ Action Special\n");
+            }
+            else
+            {
+                printf("Que voulez vous ameliorer ?\n1 _ Vie\n2 _ Mana\n3 _ Degats\n4 _ Action Special\n");
+            }
+            scanf("%d", &choix);
+
+            //Verification pour que le joueur ne donne pas un autre chiffre que 1, 2, 3 ou 4
+
+            //Vérifie si le mage et l'archer ont assez de mana pour leurs actions spéciales
+            if (choix >= 0 && choix <= 4 && perso->id != 3)
+            {
+                check = 1;
+            }
+            else if (choix >= 0 && choix <= 4 && perso->id == 3 && choix != 2)
+            {
+                check = 1;
+            }
+        }
+
+        switch (choix)
+        {
+        //life
+        case 1:
+            perso->maxLife *= 1.1;
+            perso->life = perso->maxLife;
+            printf("La vie maximum du perso est de %d.\n\n", perso->maxLife);
+            break;
+        //mana
+        case 2:
+            perso->pmMax += 5;
+            perso->pm = perso->pmMax;
+            printf("Le mana maximum du perso est de %d.\n\n", perso->pmMax);
+            break;
+        //degats
+        case 3:
+            perso->maxDegats *= 1.5;
+            perso->degat *= 1.5; //multiplier et pas faire =maxDegtas pour ne pas annuler l'éventuel effet d'une potion de force
+            if (perso->degat == perso->maxDegats)
+            {
+                printf("Les degats du perso sont de %d.\n\n", perso->maxDegats);
+            }
+            else
+            {
+                printf("Les degats du perso sont de %d avec la potion et de %d sans.\n", perso->degat, perso->maxDegats);
+            }
+            break;
+        //Special
+        case 4:
+            if (perso->id == 1)
+            {
+                perso->soin *= 2;
+                printf("Le mage soigne maintenant de %dPV.\n", perso->soin);
+            }
+            if (perso->id == 2)
+            {
+                perso->poison *= 2;
+                printf("L'archer fait maintenant %d degats d'empoisonnement.\n", perso->poison);
+            }
+            if (perso->id == 3)
+            {
+                perso->timerAgro += 1;
+                printf("Maintenant, le tank agro un mob pendant %d tour(s).\n", perso->timerAgro);
+            }
+            break;
+        default:
+            printf("erreur xp");
+            break;
+        }
+
         perso->niveau++;
         perso->xp = 0;
 
@@ -241,10 +320,10 @@ void actionPerso(perso *perso, monstre tMonstre[], struct Perso tPerso[], int nb
         if (perso->id == 1)
         {
             int i;
-            printf("Choix du perso a soigner 1 mage, 2 archer ou 3 tank.\n");
+            printf("Choix du perso a soigner(%dPV) 1 mage, 2 archer ou 3 tank.\n", perso->soin);
             scanf("%d", &i);
             i--;
-            tPerso[i].life += 20;
+            tPerso[i].life += perso->soin;
             perso->pm -= 5;
             if (tPerso[i].life > 100)
             {
@@ -262,7 +341,7 @@ void actionPerso(perso *perso, monstre tMonstre[], struct Perso tPerso[], int nb
 
                 choix = checkMonstreChoisi(tMonstre, monstreChoisi, nbMonstre);
             }
-            tMonstre[monstreChoisi].life -= 10;
+            tMonstre[monstreChoisi].life -= perso->poison;
             tMonstre[monstreChoisi].poison = 2;
             perso->pm -= 5;
             if (tMonstre[monstreChoisi].life <= 0)
@@ -287,8 +366,8 @@ void actionPerso(perso *perso, monstre tMonstre[], struct Perso tPerso[], int nb
 
                 choix = checkMonstreChoisi(tMonstre, monstreChoisi, nbMonstre);
             }
-            tMonstre[monstreChoisi].agro = 1;
-            printf("Le tank a agro le monstre %d.\n\n", monstreChoisi);
+            tMonstre[monstreChoisi].agro = perso->timerAgro;
+            printf("Le tank a agro le monstre %d pour %d tour(s).\n\n", monstreChoisi, perso->timerAgro);
         }
     }
 
@@ -383,7 +462,7 @@ void actionPerso(perso *perso, monstre tMonstre[], struct Perso tPerso[], int nb
             printf("Vous faites %d point de degat.\n", perso->degat);
             break;
         default:
-            printf("erreur");
+            printf("erreur inventaire");
             break;
         }
         //retire de l'inventaire l'objet utilisé
@@ -398,10 +477,10 @@ void actionMonstre(monstre tMonstre[], perso tPerso[], int nbMonstre)
     {
         if (tMonstre[i].life > 0)
         {
-            if (tMonstre[i].agro == 1)
+            if (tMonstre[i].agro > 0)
             {
                 tPerso[2].life -= tMonstre[i].degats / tPerso[2].resistance;
-                tMonstre[i].agro = 0;
+                tMonstre[i].agro--;
                 printf("Le monstre %d a attaquer le tank car il l'avait agro. Le tank a %d pv.\n", i, tPerso[2].life);
             }
             else
@@ -446,10 +525,23 @@ void actionMonstre(monstre tMonstre[], perso tPerso[], int nbMonstre)
     }
 }
 
+int monstreMort(lieux *lieu, int nbMonstre)
+{
+    int comptMonstreMort = 0;
+    for (int i = 0; i < nbMonstre; i++)
+    {
+        if (lieu->tMonstre[i].life <= 0)
+        {
+            comptMonstreMort++;
+        }
+    }
+    return comptMonstreMort;
+}
+
 int combat(perso tPerso[], lieux *lieu, int nbMonstre, object tInventaire[], int *money)
 {
 
-    printf("Vous etes arrive %s, ou il y a %s.\n", lieu->name, lieu->description);
+    printf("\nVous etes arrive %s, ou il y a %s.\n", lieu->name, lieu->description);
     int comptMonstreMort = 0;
 
     while ((tPerso[0].life > 0 || tPerso[1].life > 0 || tPerso[2].life > 0) && comptMonstreMort < nbMonstre)
@@ -491,25 +583,37 @@ int combat(perso tPerso[], lieux *lieu, int nbMonstre, object tInventaire[], int
             if (lieu->tMonstre[i].poison > 0)
             {
                 lieu->tMonstre[i].poison--;
-                lieu->tMonstre[i].life -= 10;
-                printf("\nLe monstre %d a perdu 10 PV avec le poison.\n", i);
+                lieu->tMonstre[i].life -= tPerso[1].poison;
+                printf("\nLe monstre %d a perdu %d PV avec le poison.\n", i, tPerso[1].poison);
                 if (lieu->tMonstre[i].life <= 0)
                 {
                     printf("Il est mort. Vous gagnez 5Ag.\n\n");
                     tPerso[1].xp++;
                     *money += 5;
                     xpPerso(&tPerso[1]);
+                    comptMonstreMort = monstreMort(lieu, 10);
                 }
             }
         }
 
         //tour de jeu pour chaque perso
-        printf("\nVous jouez le mage :\nPV : %d\nPM : %d\nDegats :%d\nResistance :%d\nAction speciale : soin\n\n", tPerso[0].life, tPerso[0].pm, tPerso[0].degat, tPerso[0].resistance);
-        actionPerso(&tPerso[0], lieu->tMonstre, tPerso, nbMonstre, tInventaire, money);
-        printf("\nVous jouez l'archer :\nPV : %d\nPM : %d\nDegats :%d\nResistance :%d\nAction speciale : fleche empoisonnes\n\n", tPerso[1].life, tPerso[1].pm, tPerso[1].degat, tPerso[1].resistance);
-        actionPerso(&tPerso[1], lieu->tMonstre, tPerso, nbMonstre, tInventaire, money);
-        printf("\nVous jouez le tank :\nPV : %d\nPM : %d\nDegats :%d\nResistance :%d\nAction speciale : agro\n\n", tPerso[2].life, tPerso[2].pm, tPerso[2].degat, tPerso[2].resistance);
-        actionPerso(&tPerso[2], lieu->tMonstre, tPerso, nbMonstre, tInventaire, money);
+        if (comptMonstreMort != nbMonstre)
+        {
+            printf("\nVous jouez le mage :\nPV : %d\nPM : %d\nDegats : %d\nResistance : %d\nAction speciale : soin\n\n", tPerso[0].life, tPerso[0].pm, tPerso[0].degat, tPerso[0].resistance);
+            actionPerso(&tPerso[0], lieu->tMonstre, tPerso, nbMonstre, tInventaire, money);
+        }
+        comptMonstreMort = monstreMort(lieu, 10);
+        if (comptMonstreMort != nbMonstre)
+        {
+            printf("\nVous jouez l'archer :\nPV : %d\nPM : %d\nDegats : %d\nResistance : %d\nAction speciale : fleche empoisonnes\n\n", tPerso[1].life, tPerso[1].pm, tPerso[1].degat, tPerso[1].resistance);
+            actionPerso(&tPerso[1], lieu->tMonstre, tPerso, nbMonstre, tInventaire, money);
+        }
+        comptMonstreMort = monstreMort(lieu, 10);
+        if (comptMonstreMort != nbMonstre)
+        {
+            printf("\nVous jouez le tank :\nPV : %d\nPM : %d\nDegats : %d\nResistance : %d\nAction speciale : agro\n\n", tPerso[2].life, tPerso[2].pm, tPerso[2].degat, tPerso[2].resistance);
+            actionPerso(&tPerso[2], lieu->tMonstre, tPerso, nbMonstre, tInventaire, money);
+        }
 
         //avant le tour des monstres
         for (int i = 0; i < nbMonstre; i++)
@@ -525,21 +629,15 @@ int combat(perso tPerso[], lieux *lieu, int nbMonstre, object tInventaire[], int
         tPerso[2].resistance = 2;
 
         //compte le nombre de monstres morts
-        comptMonstreMort = 0;
-        for (int i = 0; i < nbMonstre; i++)
-        {
-            if (lieu->tMonstre[i].life <= 0)
-            {
-                comptMonstreMort++;
-            }
-        }
+        comptMonstreMort = monstreMort(lieu, 10);
+
         if (comptMonstreMort == nbMonstre)
         {
             printf("\nVous avez tue tous les monstres.\n");
         }
         else
         {
-            printf("\nVous avez tue %d monstres au total.\n", comptMonstreMort);
+            printf("\nVous avez tue %d monstres sur 10.\n", comptMonstreMort);
         }
     }
 
@@ -558,8 +656,8 @@ void marchand(object tSeller[], object tStock[], object tInventaire[], int *mone
     sortInv(tInventaire, 10);
     view(tInventaire, 10);
 
-    printf("\nVous avez %Ag.\n", *money);
-    
+    printf("\nVous avez %dAg.\n", *money);
+
     //rempli l'inventaire du marchand
     for (int i = 0; i < 5; i++)
     {
@@ -685,11 +783,11 @@ int main()
     srand(time(NULL));
 
     //Creation Perso
-    //id; life; maxLife; pm; pmMax; degat; maxDegats; degTimer; xp; niveau; resistance
+    //id; life; maxLife; pm; pmMax; degat; maxDegats; degTimer; xp; niveau; resistance; soin; poison; timerAgro;
 
-    perso mage = {1, 100, 100, 20, 20, 2, 2, 0, 0, 1, 1};
-    perso archer = {2, 100, 100, 5, 5, 20, 20, 0, 0, 1, 1};
-    perso tank = {3, 100, 100, 0, 0, 15, 15, 0, 0, 1, 2};
+    perso mage = {1, 100, 100, 20, 20, 2, 2, 0, 0, 1, 1, 20, 0, 0};
+    perso archer = {2, 100, 100, 5, 5, 20, 20, 0, 0, 1, 1, 0, 10, 0};
+    perso tank = {3, 100, 100, 0, 0, 15, 15, 0, 0, 1, 2, 0, 0, 1};
 
     perso tPerso[3] = {mage, archer, tank};
 
